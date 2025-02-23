@@ -1,0 +1,48 @@
+import struct
+
+def float_to_binary(num):
+    return ''.join(f'{c:08b}' for c in struct.pack('>f', num))
+
+def binary_to_float(b):
+    return struct.unpack('>f', int(b, 2).to_bytes(4, byteorder='big'))[0]
+
+def add_floats(a, b):
+    a_bin = float_to_binary(a)
+    b_bin = float_to_binary(b)
+    
+    sign_a, exp_a, mant_a = a_bin[0], int(a_bin[1:9], 2), a_bin[9:]
+    sign_b, exp_b, mant_b = b_bin[0], int(b_bin[1:9], 2), b_bin[9:]
+
+    if exp_a > exp_b:
+        exp_diff = exp_a - exp_b
+        mant_b = mant_b[1:] + '0' * exp_diff
+        exp_b += exp_diff
+    else:
+        exp_diff = exp_b - exp_a
+        mant_a = mant_a[1:] + '0' * exp_diff
+        exp_a += exp_diff
+
+    mant_sum = int(mant_a, 2) + int(mant_b, 2)
+
+    if mant_sum >= (1 << 24):
+        mant_sum >>= 1
+        exp_a += 1
+
+    mant_sum = (mant_sum >> 1) + (1 << 23) if mant_sum & (1 << 23) else mant_sum >> 1
+
+    while mant_sum > (1 << 24):
+        mant_sum >>= 1
+        exp_a += 1
+
+    if exp_a > 255:
+        return float('inf')
+
+    return binary_to_float(f"{sign_a}{format(exp_a, '08b')}{format(mant_sum, '023b')}")
+
+try:
+    num1 = float(input("введите первое число: "))
+    num2 = float(input("введите второе число: "))
+    result = add_floats(num1, num2)
+    print(f"Сумма {num1} и {num2} = {result}")
+except ValueError:
+    print("error")
